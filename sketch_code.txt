@@ -1,0 +1,22 @@
+auxiliary functions:
+distance(a,b):
+	compute distance between atoms a and b
+
+angle(a,b,c):
+	compute angle between atoms a,b,c
+
+find all possible donors and all acceptors
+
+for donor in donors:
+	for acceptor in acceptors:
+		determine sec_struct
+		[acceptor,donor] = determineAccDon()
+		compute distance(donor,acceptor)
+		compute distance(hydrogen,acceptor)
+		compute angle(donor,hydrogen,acceptor)
+		compute angle(donor,acceptor,acceptor-ant)
+		compute angle(hydrogen,acceptor,acceptor-ant)
+		check if hydrogen bond:
+			then save values for sec_struct
+
+calculate means and std_devs
