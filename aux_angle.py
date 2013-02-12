@@ -17,7 +17,6 @@ def mag(mx,my,mz,nx,ny,nz):
 	dist=math.sqrt(dsq)
 	return math.sqrt(dist)
 
-
 '''
 def getAngle(ax,ay,az,bx,by,bz,cx,cy,cz, deg):
 	#angle = arccos ( (av^2 + bv^2 - cv^2)/ -2avbv )

@@ -47,10 +47,10 @@ from mmLib import AtomMath
 from itertools import islice, chain
 
 
-path = '/Users/fsimon/Desktop/nrpdb/1A2Z_A.pdb'
-protein = open(path, "r")
+#path = '/Users/fsimon/Desktop/nrpdb/1A2Z_A.pdb'
+#protein = open(path, "r")
 
-struct = FileIO.LoadStructure(file = path)
+#struct = FileIO.LoadStructure(file = path)
 
 def neighborhood(iterable):
     iterator = iter(iterable)
