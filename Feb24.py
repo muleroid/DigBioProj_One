@@ -1,6 +1,5 @@
 import prody as pr
 import numpy as np
-import itertools as iter
 
 DONOR_ACCEPTOR_MAXDISTANCE = 3.5
 HYDROGEN_ACCEPTOR_MAXDISTANCE = 2.5
@@ -29,15 +28,18 @@ def getHforAtom(aParsedProPDB, anAtom):
 def getAntecedent (apdb, anAtom):
 	aminoGroup = apdb.select('resnum ' + str(anAtom.getResnum()))
 	for at in aminoGroup:
-		if(at.getElement() == 'C'):
+		if(at.getName() == 'C'):
 			return at
 
 def getSSIndex(acc_ante):
 	#RETURN 0=ALPHA, 1=310ALPHA, 2=PARALLEL, 3=ANTIPARALLEL
+	#DSSP (Pauli) structure convention
 	ante_str = acc_ante.getSecstr()
 	if( ante_str == 'H' ):
+		#alpha
 		return 0
 	if( ante_str == 'G' ):
+		#310
 		return 1
 	if( ante_str == 'E' ):
 		#BOTH PARALLEL AND ANTIPARALLEL
