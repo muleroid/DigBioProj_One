@@ -1,4 +1,5 @@
 import prody as pr
+import math
 import numpy as np
 
 DONOR_ACCEPTOR_MAXDISTANCE = 3.5
@@ -46,10 +47,34 @@ def getSSIndex(acc_ante):
 		return 2
 	return -1
 
-def getBetaAngle ():
-	return -1
-def getGammaAngle():
-	return -1
+def getBetaAngle(cAtom,oAtom,hAtom,nAtom):
+        # we can calculate beta angle by calculating the angle between
+        # the planes spanned by N-C-O and C-O-H
+        cCoords = cAtom.getCoords()
+        oCoords = oAtom.getCoords()
+        hCoords = hAtom.getCoords()
+        nCoords = nAtom.getCoords()
+        n1 = np.cross(np.subtract(oCoords,cCoords),np.subtract(nCoords,cCoords))
+        n2 = np.cross(np.subtract(hCoords,oCoords),np.subtract(cCoords,oCoords))
+        ang = math.arccos(np.dot(n1,n2)/(np.linalg.norm(n1)*np.linalg.norm(n2)))
+	return ang
+def getGammaAngle(cAtom,oAtom,hAtom,nAtom):
+        # get normal vector of the plane spanned by C,O,N
+        cCoords = cAtom.getCoords()
+        oCoords = oAtom.getCoords()
+        hCoords = hAtom.getCoords()
+        nCoords = nAtom.getCoords()
+        n1 = np.cross(np.subtract(oCoords,cCoords),np.subtract(nCoords,cCoords))
+        # get projection of O-H vector onto plane
+        proj = np.dot(np.subtract(hCoords,oCoords),np.subtract(n1,cCoords))
+        proj = proj/np.linalg.norm(np.subtract(n1,cCoords))
+        hproj = hCoords - proj
+        # get extension of O-H in C-O direction
+        mag = np.dot(np.subtract(hCoords,oCoords),np.subtract(oCoords,cCoords))
+        # get angle
+        hyp = np.linalg.norm(np.subtract(hproj,oCoords))
+        ang = math.arccos(mag/hyp)
+	return ang
 
 #NOTE: WE WILL RUN IN BATCHES OF SIMILAR RESOLUTION
 pfile = '/Users/fsimon/Google Drive/School/Winter_13/Digital Biology/Project/DigBioProj_One/test.pdb'
