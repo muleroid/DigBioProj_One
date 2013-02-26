@@ -57,7 +57,9 @@ def getBetaAngle(cAtom,oAtom,hAtom,nAtom):
         n1 = np.cross(np.subtract(oCoords,cCoords),np.subtract(nCoords,cCoords))
         n2 = np.cross(np.subtract(hCoords,oCoords),np.subtract(cCoords,oCoords))
         ang = math.arccos(np.dot(n1,n2)/(np.linalg.norm(n1)*np.linalg.norm(n2)))
+	ang = ang*math.pi/180
 	return ang
+
 def getGammaAngle(cAtom,oAtom,hAtom,nAtom):
         # get normal vector of the plane spanned by C,O,N
         cCoords = cAtom.getCoords()
@@ -74,132 +76,98 @@ def getGammaAngle(cAtom,oAtom,hAtom,nAtom):
         # get angle
         hyp = np.linalg.norm(np.subtract(hproj,oCoords))
         ang = math.arccos(mag/hyp)
+	ang = ang*math.pi/180
 	return ang
 
+# find the number of models in a file
+def getNumMdl(pfile):
+	fp = open(pfile,'r')
+	models = 1
+	for line in fp:
+		if(line[0:5] == "NUMMDL"):
+			models = int(line[10:13])
+	return models
+
 #NOTE: WE WILL RUN IN BATCHES OF SIMILAR RESOLUTION
-pfile = '/Users/fsimon/Google Drive/School/Winter_13/Digital Biology/Project/DigBioProj_One/test.pdb'
-appf = pr.parsePDB(pfile, model=1, secondary=True, chain='A', altLoc=False)
+#pfile = '/Users/fsimon/Google Drive/School/Winter_13/Digital Biology/Project/DigBioProj_One/test.pdb'
+#pfile = '1A6S_A_H.pdb'
 
-# get secondary structure by aParsedPDBfile[i].getSecstr()
-nitrox_don = appf.select('element N O') #O can be donor in rare cases, the paper uses this convention
-oxygen_acc = appf.select('element O')
+# main function
+def runThrough(pfile):
+	appf = pr.parsePDB(pfile, model=1, secondary=True, chain='A', altLoc=False)
+	# get secondary structure by aParsedPDBfile[i].getSecstr()
+	nitrox_don = appf.select('element N O') #O can be donor in rare cases, the paper uses this convention
+	oxygen_acc = appf.select('element O')
 
-for no_d in nitrox_don:
-	for ox_a in oxygen_acc:
-
-		#1 Dist(don, acc) < 3.5
-		da_dist 	 = pr.calcDistance( no_d , ox_a )
-		if( da_dist >= DONOR_ACCEPTOR_MAXDISTANCE ):
+	for no_d in nitrox_don:
+		n_secStruct = getSSIndex(no_d)
+		if(n_secStruct < 0):
 			continue
+		for ox_a in oxygen_acc:
+			o_secStruct = getSSIndex(ox_a)
+			if(o_secStruct != n_secStruct):
+				continue
+		#1 Dist(don, acc) < 3.5
+			da_dist = pr.calcDistance( no_d , ox_a )
+			if( da_dist >= DONOR_ACCEPTOR_MAXDISTANCE ):
+				continue
 
 		#2 Dist(h_don, acc) < 3.5
-		h_don		 = getHforAtom( appf, no_d ) #Get h_don
-		ha_dist 	 = pr.calcDistance(h_don, ox_a)
-		if( ha_dist >=  HYDROGEN_ACCEPTOR_MAXDISTANCE):
-			continue
-
+			h_don = getHforAtom( appf, no_d ) #Get h_don
+			ha_dist  = pr.calcDistance(h_don, ox_a)
+			if( ha_dist >=  HYDROGEN_ACCEPTOR_MAXDISTANCE):
+				continue
+			
 		#3 Angle(don, h_don, acc) > 90
-		dha_ang = pr.calcAngle( no_d, h_don, ox_a )
-		if( dha_ang < DHA_ANGLE ):
-			continue
-
+			dha_ang = pr.calcAngle( no_d, h_don, ox_a )
+			if( dha_ang < DHA_ANGLE ):
+				continue
+			
 		#4 Angle(don, acc, acc_ante) > 90
-		acc_ante 	= getAntecedent(appf, ox_a) #Get acc_ante
-		daa_ang 	=  pr.calcAngle( no_d, ox_a, acc_ante)
-		if( daa_ang < DAB_ANGLE ):
-			continue
-
+			acc_ante = getAntecedent(appf, ox_a) #Get acc_ante
+			daa_ang =  pr.calcAngle( no_d, ox_a, acc_ante)
+			if( daa_ang < DAB_ANGLE ):
+				continue
+			
 		#5 Angle(h_don, acc, acc_ante) > 90
-		haa_ang 	= pr.calcAngle( h_don, ox_a, acc_ante )
-		if( haa_ang < HAB_ANGLE ):
-			continue
+			haa_ang = pr.calcAngle( h_don, ox_a, acc_ante )
+			if( haa_ang < HAB_ANGLE ):
+				continue
 
 		#We have a valid H-Bond with no_d, ox_a, h_don
-		print 'HBond elements', h_don.getName(), no_d.getName(), ox_a.getName()
-		print 'DA dist', da_dist
-		print 'HA dist', ha_dist
-		print 'DHA ang', dha_ang
-		print 'DAA ang', daa_ang
-		print 'HAA ang', haa_ang
-		
-		beta_ang = getBetaAngle ()
-		gamm_ang = getGammaAngle()
+		#		print 'HBond elements', h_don.getName(), no_d.getName(), ox_a.getName()
+		#		print 'DA dist', da_dist
+		#		print 'HA dist', ha_dist
+		#		print 'DHA ang', dha_ang
+		#		print 'DAA ang', daa_ang
+		#		print 'HAA ang', haa_ang
+			
+		#place holders for beta and gamma for now
+			beta_ang = 0
+			gamm_ang = 0
+		#beta_ang = getBetaAngle ()
+		#gamm_ang = getGammaAngle()
 		#PUT DATA INTO COLUMN DATA STRUCTURES
-		ssindex = getSSIndex(acc_ante)
-		if (ssindex == -1):
+			ssindex = getSSIndex(acc_ante)
+		#if (ssindex == -1):
 			#Not a structure we need
-			continue
-		COLUMN_D_ON  [ssindex].append(da_dist)
-		COLUMN_D_OH  [ssindex].append(ha_dist)
-		COLUMN_A_NHO [ssindex].append(dha_ang)
-		COLUMN_A_HOC [ssindex].append(haa_ang)
-		COLUMN_BETA  [ssindex].append(beta_ang)
-		COLUMN_GAMMA [ssindex].append(gamm_ang)
+			#	continue
+			COLUMN_D_ON  [ssindex].append(da_dist)
+			COLUMN_D_OH  [ssindex].append(ha_dist)
+			COLUMN_A_NHO [ssindex].append(dha_ang)
+			COLUMN_A_HOC [ssindex].append(haa_ang)
+			COLUMN_BETA  [ssindex].append(beta_ang)
+			COLUMN_GAMMA [ssindex].append(gamm_ang)
 
-COLUMN_D_ON_AV  = [sum(x)/len(x) for x in COLUMN_D_ON]
-COLUMN_D_OH_AV  = [sum(x)/len(x) for x in COLUMN_D_OH]
-COLUMN_A_NHO_AV = [sum(x)/len(x) for x in COLUMN_A_NHO]
-COLUMN_A_HOC_AV = [sum(x)/len(x) for x in COLUMN_A_HOC]
-COLUMN_BETA_AV  = [sum(x)/len(x) for x in COLUMN_BETA]
-COLUMN_GAMMA_AV = [sum(x)/len(x) for x in COLUMN_GAMMA]
+	COLUMN_D_ON_AV  = [sum(x)/len(x) for x in COLUMN_D_ON if len(x) > 0]
+	COLUMN_D_OH_AV  = [sum(x)/len(x) for x in COLUMN_D_OH if len(x) > 0]
+	COLUMN_A_NHO_AV = [sum(x)/len(x) for x in COLUMN_A_NHO if len(x) > 0]
+	COLUMN_A_HOC_AV = [sum(x)/len(x) for x in COLUMN_A_HOC if len(x) > 0]
+	COLUMN_BETA_AV  = [sum(x)/len(x) for x in COLUMN_BETA if len(x) > 0]
+	COLUMN_GAMMA_AV = [sum(x)/len(x) for x in COLUMN_GAMMA if len(x) > 0]
 
-TABLE = [COLUMN_D_ON_AV, COLUMN_D_OH_AV, COLUMN_A_NHO_AV, COLUMN_A_HOC_AV, COLUMN_BETA_AV, COLUMN_GAMMA_AV]
-print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
-print np.array(TABLE).T
+	TABLE = [COLUMN_D_ON_AV, COLUMN_D_OH_AV, COLUMN_A_NHO_AV, COLUMN_A_HOC_AV, COLUMN_BETA_AV, COLUMN_GAMMA_AV]
+	print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
+	print np.array(TABLE).T
 
-'''
-for at1 in nitrox:
-	for at2 in nitrox:
-		if( pr.calcDistance(at1,at2) >= DONOR_ACCEPTOR_MAXDISTANCE ):
-			continue
-#ASSUME AT1 IS DONOR
-		#Assume at1 is Donor and at2 is Acceptor
-		h_of_at1 = getHforAtom(appf, at1)
-		at1DonorFlag = True
-		if( pr.calcDistance(h_of_at1, at2) >=  HYDROGEN_ACCEPTOR_MAXDISTANCE):
-			at1DonorFlag = False
-			continue
-		if ( pr.calcAngle(at1, h_of_at1, at2) <= DHA_ANGLE ):
-			at1DonorFlag = False
-			continue
-		acceptor_antecedent = 
-#ASSUME AT2 IS DONOR
-		#Assume at2 is Donor and at1 is Acceptor
-		h_of_at2 = getHforAtom(appf, at2)
-		at2DonorFlag = True
-		if( pr.calcDistance(h_of_at2, at1) >  HYDROGEN_ACCEPTOR_MAXDISTANCE):
-			at2DonorFlag = False
-			continue
-'''
-
-'''
-def getAntecedent(aParsedPDBfile, anAtom):
-	indOfAtom = anAtom.getIndex()
-	rng = range(indOfAtom-3, indOfAtom+3) #arbitrary 3 behind and ahead
-	rng = [x for x in rng if x>0 & x<aParsedPDBfile.numAtoms()]
-	rng.reverse()
-	for ind in rng:
-		if(aParsedPDBfile[ind].getName() == 'C'):
-			return aParsedPDBfile[ind]
-'''
-
-'''
-# antecedents = 
-donors = nitrogens
-acceptors = oxygens
-for donor in donors:
-	for acceptor in acceptors:
-		dist = pr.calcDistance(donor, acceptor)
-		if(dist >= 3.5):
-			continue
-		hydrogen = getHforAtom(appf, acceptor)
-		hdistance = pr.calcDistance(acceptor, hydrogen)
-		if(hdistance >= 2.5):
-			continue
-		antecedent = getAntecedent(appf, acceptor)
-		dha = pr.calcAngle(hydrogen, acceptor, antecedent)
-		if(dha <= 90):
-			conitnue
-		#We have a valid h-bond
-		print donor, acceptor
-'''
+getNumMdl('1A6S_A_H.pdb')
