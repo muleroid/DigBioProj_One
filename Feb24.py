@@ -19,12 +19,28 @@ COLUMN_BETA  = [[],[],[]] # Convert to [[],[],[],[]] when we separate parallel a
 COLUMN_GAMMA = [[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
 
 
-def getHforAtom(appf, anAtom):
-	resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
-	for at in resnumneighbors:
-		if(at.getElement() == 'H'):
-			#FILTER OTHER HYDROGENS
-			return at	
+##def getHforAtom(appf, anAtom):
+##	resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
+##	for at in resnumneighbors:
+##		if(at.getElement() == 'H'):
+##			#FILTER OTHER HYDROGENS
+##			return at
+
+def getHforAtom(nAtom, oAtom, cAtom):
+        # create hydrogen
+        ag = oAtom.getAtomGroup()
+        acsi = oATom.getACSIndex()
+        H = pr.Atom(ag,acsi,'-1')
+        # get coordinates
+        nCoords = nAtom.getCoords()
+        oCoords = oAtom.getCoords()
+        cCoords = cAtom.getCoords()
+        # C-O vector
+        co = np.subtract(cCoords,oCoords)
+        adjustment = np.divide(co,np.linalg.norm(co))
+        hCoords = np.add(nCoords,adjustment)
+        H.setCoords(hCoords)
+        return H
 
 def getAntecedent (appf, anAtom):
 	aminoGroup = appf.select('resnum ' + str(anAtom.getResnum()))
