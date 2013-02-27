@@ -19,15 +19,15 @@ COLUMN_BETA  = [[],[],[]] # Convert to [[],[],[],[]] when we separate parallel a
 COLUMN_GAMMA = [[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
 
 
-def getHforAtom(aParsedProPDB, anAtom):
-	resnumneighbors = aParsedProPDB.select('resnum '+str(anAtom.getResnum()))
+def getHforAtom(appf, anAtom):
+	resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
 	for at in resnumneighbors:
 		if(at.getElement() == 'H'):
 			#FILTER OTHER HYDROGENS
-			return at
+			return at	
 
-def getAntecedent (apdb, anAtom):
-	aminoGroup = apdb.select('resnum ' + str(anAtom.getResnum()))
+def getAntecedent (appf, anAtom):
+	aminoGroup = appf.select('resnum ' + str(anAtom.getResnum()))
 	for at in aminoGroup:
 		if(at.getName() == 'C'):
 			return at
@@ -47,38 +47,64 @@ def getSSIndex(acc_ante):
 		return 2
 	return -1
 
-def getBetaAngle(cAtom,oAtom,hAtom,nAtom):
-        # we can calculate beta angle by calculating the angle between
-        # the planes spanned by N-C-O and C-O-H
+def getBetaAngle(appf,cAtom,oAtom,hAtom):
+	# first determine the nAtom
+	aminoGroup = appf.select('resnum ' + str(cAtom.getResnum()))
+	for at in aminoGroup:
+		if(at.getName() == 'N'):
+			nAtom = at
+        # get coordinates
         cCoords = cAtom.getCoords()
         oCoords = oAtom.getCoords()
         hCoords = hAtom.getCoords()
         nCoords = nAtom.getCoords()
-        n1 = np.cross(np.subtract(oCoords,cCoords),np.subtract(nCoords,cCoords))
-        n2 = np.cross(np.subtract(hCoords,oCoords),np.subtract(cCoords,oCoords))
-        ang = math.arccos(np.dot(n1,n2)/(np.linalg.norm(n1)*np.linalg.norm(n2)))
-	ang = ang*math.pi/180
+	# get relevant vectors
+	oc = np.subtract(oCoords,cCoords)
+	nc = np.subtract(nCoords,cCoords)
+	ho = np.subtract(hCoords,oCoords)
+       	# find norm vector to N-C-O plane
+	n1 = np.cross(oc,nc)
+	n1_unit = np.divide(n1,np.linalg.norm(n1))
+	# find projection of H-O onto plane
+	out = np.dot(ho,n1_unit)
+	ho_ip = np.subtract(ho,np.multiply(n1_unit,out))
+	ang = np.linalg.norm(ho_ip)/np.linalg.norm(ho)
+	ang = math.acos(ang)
+	# we can think of H-O vector as the normal vector to a plane
+	#ang = math.acos(np.dot(ho,n1)/(np.linalg.norm(ho)*np.linalg.norm(n1)))
+	ang = ang*180/math.pi
+	# then we just need to adjust output by 90 degrees to get correct answer
 	return ang
 
-def getGammaAngle(cAtom,oAtom,hAtom,nAtom):
-        # get normal vector of the plane spanned by C,O,N
+def getGammaAngle(appf,cAtom,oAtom,hAtom):
+	# first determine the nAtom
+	aminoGroup = appf.select('resnum ' + str(cAtom.getResnum()))
+	for at in aminoGroup:
+		if(at.getName() == 'N'):
+			nAtom = at
+        # get coordinates
         cCoords = cAtom.getCoords()
         oCoords = oAtom.getCoords()
         hCoords = hAtom.getCoords()
         nCoords = nAtom.getCoords()
-        n1 = np.cross(np.subtract(oCoords,cCoords),np.subtract(nCoords,cCoords))
-        # get projection of O-H vector onto plane
-        proj = np.dot(np.subtract(hCoords,oCoords),np.subtract(n1,cCoords))
-        proj = proj/np.linalg.norm(np.subtract(n1,cCoords))
-        hproj = hCoords - proj
-        # get extension of O-H in C-O direction
-        mag = np.dot(np.subtract(hCoords,oCoords),np.subtract(oCoords,cCoords))
-        # get angle
-        hyp = np.linalg.norm(np.subtract(hproj,oCoords))
-        ang = math.arccos(mag/hyp)
-	ang = ang*math.pi/180
-	return ang
-
+	# get necessary vectors
+	oc = np.subtract(oCoords,cCoords)
+	nc = np.subtract(nCoords,cCoords)
+	ho = np.subtract(hCoords,oCoords)
+	n1 = np.cross(oc,nc)
+	n1_unit = np.divide(n1,np.linalg.norm(n1))
+	# get projection of H-O in O-C direction
+	oc_unit = np.divide(oc,np.linalg.norm(oc))
+	#print oc_unit
+	hproj = np.dot(ho,oc_unit)
+	# get projection of H-O onto N-C-O plane
+	out = np.dot(ho,n1_unit)
+	ho_ip = np.subtract(ho,np.multiply(n1_unit,out))
+	ang = hproj/np.linalg.norm(ho_ip)
+	ang = math.acos(ang)
+	ang = ang*180/math.pi
+	return ang*-1
+	
 # find the number of models in a file
 def getNumMdl(pfile):
 	fp = open(pfile,'r')
@@ -143,10 +169,10 @@ def runThrough(pfile):
 		#		print 'HAA ang', haa_ang
 			
 		#place holders for beta and gamma for now
-			beta_ang = 0
-			gamm_ang = 0
-		#beta_ang = getBetaAngle ()
-		#gamm_ang = getGammaAngle()
+		#	beta_ang = 0
+		#	gamm_ang = 0
+			beta_ang = getBetaAngle (appf,acc_ante,ox_a,h_don)
+			gamm_ang = getGammaAngle(appf,acc_ante,ox_a,h_don)
 		#PUT DATA INTO COLUMN DATA STRUCTURES
 			ssindex = getSSIndex(acc_ante)
 		#if (ssindex == -1):
@@ -170,4 +196,4 @@ def runThrough(pfile):
 	print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
 	print np.array(TABLE).T
 
-getNumMdl('1A6S_A_H.pdb')
+runThrough('1A3H_A_H.pdb')
