@@ -19,18 +19,14 @@ COLUMN_BETA  = [[],[],[]] # Convert to [[],[],[],[]] when we separate parallel a
 COLUMN_GAMMA = [[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
 
 
-def getHforAtom(appf, anAtom):
-	resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
-	for at in resnumneighbors:
-		if(at.getElement() == 'H'):
-			#FILTER OTHER HYDROGENS
-			return at
+##def getHforAtom(appf, anAtom):
+##	resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
+##	for at in resnumneighbors:
+##		if(at.getElement() == 'H'):
+##			#FILTER OTHER HYDROGENS
+##			return at
 
-"""def getHforAtom(nAtom, oAtom, cAtom):
-        # create hydrogen
-        ag = oAtom.getAtomGroup()
-        acsi = oATom.getACSIndex()
-        H = pr.Atom(ag,acsi,'-1')
+def getHforAtom(nAtom, oAtom, cAtom):
         # get coordinates
         nCoords = nAtom.getCoords()
         oCoords = oAtom.getCoords()
@@ -39,8 +35,7 @@ def getHforAtom(appf, anAtom):
         co = np.subtract(cCoords,oCoords)
         adjustment = np.divide(co,np.linalg.norm(co))
         hCoords = np.add(nCoords,adjustment)
-        H.setCoords(hCoords)
-        return H"""
+        return hCoords
 
 def getAntecedent (appf, anAtom):
 	aminoGroup = appf.select('resnum ' + str(anAtom.getResnum()))
@@ -72,7 +67,7 @@ def getBetaAngle(appf,cAtom,oAtom,hAtom):
         # get coordinates
         cCoords = cAtom.getCoords()
         oCoords = oAtom.getCoords()
-        hCoords = hAtom.getCoords()
+        hCoords = hAtom
         nCoords = nAtom.getCoords()
 	# get relevant vectors
 	oc = np.subtract(oCoords,cCoords)
@@ -101,7 +96,7 @@ def getGammaAngle(appf,cAtom,oAtom,hAtom):
         # get coordinates
         cCoords = cAtom.getCoords()
         oCoords = oAtom.getCoords()
-        hCoords = hAtom.getCoords()
+        hCoords = hAtom
         nCoords = nAtom.getCoords()
 	# get necessary vectors
 	oc = np.subtract(oCoords,cCoords)
@@ -149,13 +144,14 @@ def runThrough(pfile):
 			o_secStruct = getSSIndex(ox_a)
 			if(o_secStruct != n_secStruct):
 				continue
+			acc_ante = getAntecedent(appf, ox_a) #Get acc_ante
+			h_don = getHforAtom(no_d,ox_a,acc_ante)
 		#1 Dist(don, acc) < 3.5
 			da_dist = pr.calcDistance( no_d , ox_a )
 			if( da_dist >= DONOR_ACCEPTOR_MAXDISTANCE ):
 				continue
 
 		#2 Dist(h_don, acc) < 3.5
-			h_don = getHforAtom( appf, no_d ) #Get h_don
 			ha_dist  = pr.calcDistance(h_don, ox_a)
 			if( ha_dist >=  HYDROGEN_ACCEPTOR_MAXDISTANCE):
 				continue
@@ -166,7 +162,6 @@ def runThrough(pfile):
 				continue
 			
 		#4 Angle(don, acc, acc_ante) > 90
-			acc_ante = getAntecedent(appf, ox_a) #Get acc_ante
 			daa_ang =  pr.calcAngle( no_d, ox_a, acc_ante)
 			if( daa_ang < DAB_ANGLE ):
 				continue
@@ -212,4 +207,4 @@ def runThrough(pfile):
 	print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
 	print np.array(TABLE).T
 
-runThrough('1A2Z_A_H.pdb')
+runThrough('1A2Z_A.pdb')
