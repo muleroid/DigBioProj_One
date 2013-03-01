@@ -119,10 +119,12 @@ def getGammaAngle(appf,cAtom,oAtom,hAtom):
 # find the number of models in a file
 def getNumMdl(pfile):
     fp = open(pfile,'r')
-    models = 1
+    models = 0
     for line in fp:
-	if(line[0:5] == "NUMMDL"):
-	    models = int(line[10:13])
+	if(line[0:4] == "MODEL"):
+	    models = models+1
+    if(models == 0):
+        return 1
     return models
 
 #NOTE: WE WILL RUN IN BATCHES OF SIMILAR RESOLUTION
