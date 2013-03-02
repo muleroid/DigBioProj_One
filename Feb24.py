@@ -24,7 +24,23 @@ def getHforAtom(appf, anAtom):
 	for at in resnumneighbors:
 		if(at.getElement() == 'H'):
 			#FILTER OTHER HYDROGENS
-			return at	
+			return at
+
+"""def getHforAtom(nAtom, oAtom, cAtom):
+        # create hydrogen
+        ag = oAtom.getAtomGroup()
+        acsi = oATom.getACSIndex()
+        H = pr.Atom(ag,acsi,'-1')
+        # get coordinates
+        nCoords = nAtom.getCoords()
+        oCoords = oAtom.getCoords()
+        cCoords = cAtom.getCoords()
+        # C-O vector
+        co = np.subtract(cCoords,oCoords)
+        adjustment = np.divide(co,np.linalg.norm(co))
+        hCoords = np.add(nCoords,adjustment)
+        H.setCoords(hCoords)
+        return H"""
 
 def getAntecedent (appf, anAtom):
 	aminoGroup = appf.select('resnum ' + str(anAtom.getResnum()))
@@ -196,4 +212,4 @@ def runThrough(pfile):
 	print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
 	print np.array(TABLE).T
 
-runThrough('1A3H_A_H.pdb')
+runThrough('1A2Z_A_H.pdb')
