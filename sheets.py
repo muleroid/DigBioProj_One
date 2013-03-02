@@ -79,11 +79,12 @@ def test(pfile):
         dons = strand.getNAtoms()
         accs = strand.getOAtoms()
         for n in dons:
-            print n.getResnum()
-            print n.getResname()
+            #print n.getResnum()
+            #print n.getResname()
+            #print n.getSecstr()
     return
 
-test('1A2Z_A.pdb')
+#test('1A2Z_A.pdb')
 
 ##def getUniqueIDofStrand (residueNumber, listOfStrands):
 ##    for strand in listOfStrands:
