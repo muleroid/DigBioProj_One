@@ -133,7 +133,7 @@ def getNumMdls(pfile):
 #pfile = '/Users/fsimon/Google Drive/School/Winter_13/Digital Biology/Project/DigBioProj_One/test.pdb'
 #pfile = '1A6S_A_H.pdb'
 
-def checkHBonds(no_d, ox_a, h_don, acc_ante, ssindex):
+def checkHBonds(appf,no_d, ox_a, h_don, acc_ante, ssindex):
     #1 Dist(don, acc) < 3.5
     da_dist = pr.calcDistance( no_d , ox_a )
     if( da_dist >= DONOR_ACCEPTOR_MAXDISTANCE ):
@@ -171,6 +171,7 @@ def checkHBonds(no_d, ox_a, h_don, acc_ante, ssindex):
     gamm_ang = getGammaAngle(appf,acc_ante,ox_a,h_don)
         
     #PUT DATA INTO COLUMN DATA STRUCTURES
+#    print ssindex
     COLUMN_D_ON  [ssindex].append(da_dist)
     COLUMN_D_OH  [ssindex].append(ha_dist)
     COLUMN_A_NHO [ssindex].append(dha_ang)
@@ -197,12 +198,12 @@ def parseHelices(appf):
             h_don = getHforAtom(appf,no_d)
             newCoords = setHcoords(no_d,ox_a,acc_ante)
             h_don.setCoords(newCoords)
-            checkHBonds(no_d,ox_a,h_don,acc_ante,ssindex)
+            checkHBonds(appf,no_d,ox_a,h_don,acc_ante,ssindex)
     return
 
 # do the sheets
 def parseSheets(appf, los):
-    strands = buildStrands(appf, los)
+    strands = sheets.buildStrands(appf, los)
     numStrands = len(strands)
     for i in np.arange(numStrands-2):
         base = strands[i]
@@ -211,7 +212,7 @@ def parseSheets(appf, los):
             continue
         for no_d in base.getNAtoms():
             for ox_a in comp.getOAtoms():
-                acc_Ante = getAntecendent(appf, ox_a)
+                acc_ante = getAntecedent(appf, ox_a)
                 if(comp.getSense() > 0):
                     ssindex = 2
                 else:
@@ -219,17 +220,18 @@ def parseSheets(appf, los):
                 h_don = getHforAtom(appf,no_d)
                 newCoords = setHcoords(no_d,ox_a,acc_ante)
                 h_don.setCoords(newCoords)
-                checkHBonds(no_d,ox_a,h_don,acc_ante,ssindex)
+                checkHBonds(appf,no_d,ox_a,h_don,acc_ante,ssindex)
     return
 
 # main function
 def runThrough(pfile):
     # initial setup
+    print "Running through " + pfile + "..."
     numMdls = getNumMdls(pfile)
     appf = pr.parsePDB(pfile, model=numMdls, secondary=True, chain='A', altLoc=False)
-    #los = sheets.initializeList(pfile)
+    los = sheets.initializeList(pfile)
     parseHelices(appf)
-    #parseSheets(appf)
+    parseSheets(appf,los)
 
     # print out our results
     COLUMN_D_ON_AV  = [sum(x)/len(x) for x in COLUMN_D_ON if len(x) > 0]
@@ -243,4 +245,4 @@ def runThrough(pfile):
     print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
     print np.array(TABLE).T
 
-#runThrough('1A2Z_A_H.pdb')
+runThrough('1A2Z_A_H.pdb')
