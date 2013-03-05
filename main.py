@@ -122,7 +122,8 @@ def getNumMdls(pfile):
     fp = open(pfile,'r')
     models = 0
     for line in fp:
-        if(line[0:4] == "MODEL"):
+        #print line[0:4]
+        if(line[0:5] == "MODEL"):
             models = models+1
     fp.close()
     if(models == 0):
@@ -228,6 +229,7 @@ def runThrough(pfile):
     # initial setup
     print "Running through " + pfile + "..."
     numMdls = getNumMdls(pfile)
+    print numMdls
     appf = pr.parsePDB(pfile, model=numMdls, secondary=True, chain='A', altLoc=False)
     los = sheets.initializeList(pfile)
     parseHelices(appf)
@@ -245,4 +247,4 @@ def runThrough(pfile):
     print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
     print np.array(TABLE).T
 
-runThrough('1A2Z_A_H.pdb')
+runThrough('1A6S_A_H.pdb')
