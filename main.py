@@ -1,6 +1,7 @@
 import prody as pr
 import math
 import numpy as np
+import os
 import sheets
 
 DONOR_ACCEPTOR_MAXDISTANCE = 3.5
@@ -12,20 +13,25 @@ HAB_ANGLE = 90
 #COLUMNS FOR DATA
 #STRUCTURE INDICES ARE: 0=ALPHA, 1=310ALPHA, 2=PARALLEL, 3=ANTIPARALLEL
 #COLUMN[STRUCTURE][1-N]
-COLUMN_D_ON  = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_D_OH  = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_A_NHO = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_A_HOC = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_BETA  = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_GAMMA = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-
+COLUMN_D_ON  = [[],[],[],[]] 
+COLUMN_D_OH  = [[],[],[],[]] 
+COLUMN_A_NHO = [[],[],[],[]] 
+COLUMN_A_HOC = [[],[],[],[]] 
+COLUMN_BETA  = [[],[],[],[]] 
+COLUMN_GAMMA = [[],[],[],[]] 
 
 def getHforAtom(appf, anAtom):
     resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
+    curMin = 50
     for at in resnumneighbors:
         if(at.getElement() == 'H'):
             #FILTER OTHER HYDROGENS
-            return at
+            dist = pr.calcDistance(at,anAtom)
+            if(dist <= curMin):
+            #print pr.calcDistance(at,anAtom), at.getResnum(), at.getName()
+                curMin = dist
+                target = at
+    return at
 
 def setHcoords(nAtom, oAtom, cAtom):
     # get coordinates
@@ -122,7 +128,8 @@ def getNumMdls(pfile):
     fp = open(pfile,'r')
     models = 0
     for line in fp:
-        if(line[0:4] == "MODEL"):
+        #print line[0:4]
+        if(line[0:5] == "MODEL"):
             models = models+1
     fp.close()
     if(models == 0):
@@ -133,7 +140,7 @@ def getNumMdls(pfile):
 #pfile = '/Users/fsimon/Google Drive/School/Winter_13/Digital Biology/Project/DigBioProj_One/test.pdb'
 #pfile = '1A6S_A_H.pdb'
 
-def checkHBonds(no_d, ox_a, h_don, acc_ante, ssindex):
+def checkHBonds(appf,no_d, ox_a, h_don, acc_ante, ssindex):
     #1 Dist(don, acc) < 3.5
     da_dist = pr.calcDistance( no_d , ox_a )
     if( da_dist >= DONOR_ACCEPTOR_MAXDISTANCE ):
@@ -150,9 +157,9 @@ def checkHBonds(no_d, ox_a, h_don, acc_ante, ssindex):
         return
             
     #4 Angle(don, acc, acc_ante) > 90
-    daa_ang =  pr.calcAngle( no_d, ox_a, acc_ante)
-    if( daa_ang < DAB_ANGLE ):
-        return
+    #daa_ang =  pr.calcAngle( no_d, ox_a, acc_ante)
+    #if( daa_ang < DAB_ANGLE ):
+    #    return
             
     #5 Angle(h_don, acc, acc_ante) > 90
     haa_ang = pr.calcAngle( h_don, ox_a, acc_ante )
@@ -171,6 +178,9 @@ def checkHBonds(no_d, ox_a, h_don, acc_ante, ssindex):
     gamm_ang = getGammaAngle(appf,acc_ante,ox_a,h_don)
         
     #PUT DATA INTO COLUMN DATA STRUCTURES
+#    print ssindex
+    #towrite = ",".join([str(h_don.getResnum()),str(h_don.getCoords())])
+    #fp.write(towrite+"\r\n")
     COLUMN_D_ON  [ssindex].append(da_dist)
     COLUMN_D_OH  [ssindex].append(ha_dist)
     COLUMN_A_NHO [ssindex].append(dha_ang)
@@ -195,14 +205,14 @@ def parseHelices(appf):
             acc_ante = getAntecedent(appf, ox_a) #Get acc_ante
             ssindex = getSSIndex(acc_ante) # get ssindex
             h_don = getHforAtom(appf,no_d)
-            newCoords = setHcoords(no_d,ox_a,acc_ante)
-            h_don.setCoords(newCoords)
-            checkHBonds(no_d,ox_a,h_don,acc_ante,ssindex)
+            #newCoords = setHcoords(no_d,ox_a,acc_ante)
+            #h_don.setCoords(newCoords)
+            checkHBonds(appf,no_d,ox_a,h_don,acc_ante,ssindex)
     return
 
 # do the sheets
 def parseSheets(appf, los):
-    strands = buildStrands(appf, los)
+    strands = sheets.buildStrands(appf, los)
     numStrands = len(strands)
     for i in np.arange(numStrands-2):
         base = strands[i]
@@ -211,7 +221,7 @@ def parseSheets(appf, los):
             continue
         for no_d in base.getNAtoms():
             for ox_a in comp.getOAtoms():
-                acc_Ante = getAntecendent(appf, ox_a)
+                acc_ante = getAntecedent(appf, ox_a)
                 if(comp.getSense() > 0):
                     ssindex = 2
                 else:
@@ -219,17 +229,19 @@ def parseSheets(appf, los):
                 h_don = getHforAtom(appf,no_d)
                 newCoords = setHcoords(no_d,ox_a,acc_ante)
                 h_don.setCoords(newCoords)
-                checkHBonds(no_d,ox_a,h_don,acc_ante,ssindex)
+                checkHBonds(appf,no_d,ox_a,h_don,acc_ante,ssindex)
     return
 
 # main function
 def runThrough(pfile):
     # initial setup
+    print "Running through " + pfile + "..."
     numMdls = getNumMdls(pfile)
+    #print numMdls
     appf = pr.parsePDB(pfile, model=numMdls, secondary=True, chain='A', altLoc=False)
-    #los = sheets.initializeList(pfile)
+    los = sheets.initializeList(pfile)
     parseHelices(appf)
-    #parseSheets(appf)
+    parseSheets(appf,los)
 
     # print out our results
     COLUMN_D_ON_AV  = [sum(x)/len(x) for x in COLUMN_D_ON if len(x) > 0]
@@ -243,4 +255,52 @@ def runThrough(pfile):
     print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
     print np.array(TABLE).T
 
-#runThrough('1A2Z_A_H.pdb')
+# code to run through all the files and stuff
+AGGR_D_ON  = [0,0,0,0] 
+AGGR_D_OH  = [0,0,0,0] 
+AGGR_A_NHO = [0,0,0,0] 
+AGGR_A_HOC = [0,0,0,0] 
+AGGR_BETA  = [0,0,0,0] 
+AGGR_GAMMA = [0,0,0,0]
+
+LEN_D_ON = [0,0,0,0]
+LEN_D_OH = [0,0,0,0]
+LEN_A_NHO = [0,0,0,0]
+LEN_A_HOC = [0,0,0,0]
+LEN_BETA = [0,0,0,0]
+LEN_GAMMA = [0,0,0,0]
+
+pFiles = os.listdir(os.getcwd())
+for pfile in pFiles:
+    # reset everything
+    COLUMN_D_ON  = [[],[],[],[]] 
+    COLUMN_D_OH  = [[],[],[],[]] 
+    COLUMN_A_NHO = [[],[],[],[]] 
+    COLUMN_A_HOC = [[],[],[],[]] 
+    COLUMN_BETA  = [[],[],[],[]] 
+    COLUMN_GAMMA = [[],[],[],[]] 
+    runThrough(pfile)
+    # aggregate that shit
+    AGGR_D_ON = [(AGGR_D_ON[i] + sum(COLUMN_D_ON[i])) for i in range(4)]
+    AGGR_D_OH = [(AGGR_D_OH[i] + sum(COLUMN_D_OH[i])) for i in range(4)]
+    AGGR_A_NHO = [(AGGR_A_NHO[i] + sum(COLUMN_A_NHO[i])) for i in range(4)]
+    AGGR_A_HOC = [(AGGR_A_HOC[i] + sum(COLUMN_A_HOC[i])) for i in range(4)]
+    AGGR_BETA = [(AGGR_BETA[i] + sum(COLUMN_BETA[i])) for i in range(4)]
+    AGGR_GAMMA = [(AGGR_GAMMA[i] + sum(COLUMN_GAMMA[i])) for i in range(4)]
+
+    LEN_D_ON = [(LEN_D_ON[i] + len(COLUMN_D_ON[i])) for i in range(4)]
+    LEN_D_OH = [(LEN_D_OH[i] + len(COLUMN_D_OH[i])) for i in range(4)]
+    LEN_A_NHO = [(LEN_A_NHO[i] + len(COLUMN_A_NHO[i])) for i in range(4)]
+    LEN_A_HOC = [(LEN_A_HOC[i] + len(COLUMN_A_HOC[i])) for i in range(4)]
+    LEN_BETA = [(LEN_BETA + len(COLUMN_BETA[i])) for i in range(4)]
+    LEN_GAMMA = [(LEN_GAMMA + len(COLUMN_GAMMA[i])) for i in range(4)]
+
+# calculate the averages
+AVG_D_ON = [(AGGR_D_ON[i]/LEN_D_ON[i]) for i in range(4)]
+AVG_D_OH = [(AGGR_D_OH[i]/LEN_D_OH[i]) for i in range(4)]
+AVG_A_NHO = [(AGGR_A_NHO[i]/LEN_A_NHO[i]) for i in range(4)]
+AVG_A_HOC = [(AGGR_A_HOC[i]/LEN_A_HOC[i]) for i in range(4)]
+AVG_BETA = [(AGGR_BETA[i]/LEN_BETA[i]) for i in range(4)]
+AVG_GAMMA = [(AGGR_GAMMA[i]/LEN_GAMMA[i]) for i in range(4)]
+TABLE = [AVG_D_ON,AVG_D_OH,AVG_A_NHO,AVG_A_HOC,AVG_BETA,AVG_GAMMA]
+print np.array(TABLE).T

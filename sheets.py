@@ -46,7 +46,7 @@ def initializeList(pfile):
             break
 
     fp.close()
-    print list_of_strands
+#    print list_of_strands
     return list_of_strands
 
 # pull necessary atoms for each strand
@@ -79,9 +79,9 @@ def test(pfile):
         dons = strand.getNAtoms()
         accs = strand.getOAtoms()
         for n in dons:
-            #print n.getResnum()
-            #print n.getResname()
-            #print n.getSecstr()
+            print n.getResnum()
+            print n.getResname()
+            print n.getSecstr()
     return
 
 #test('1A2Z_A.pdb')
