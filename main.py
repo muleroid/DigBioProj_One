@@ -18,14 +18,20 @@ COLUMN_A_NHO = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate paralle
 COLUMN_A_HOC = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
 COLUMN_BETA  = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
 COLUMN_GAMMA = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-
+#fp = open('new_H.txt','wb')
 
 def getHforAtom(appf, anAtom):
     resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
+    curMin = 50
     for at in resnumneighbors:
         if(at.getElement() == 'H'):
             #FILTER OTHER HYDROGENS
-            return at
+            dist = pr.calcDistance(at,anAtom)
+            if(dist <= curMin):
+            #print pr.calcDistance(at,anAtom), at.getResnum(), at.getName()
+                curMin = dist
+                target = at
+    return at
 
 def setHcoords(nAtom, oAtom, cAtom):
     # get coordinates
@@ -151,9 +157,9 @@ def checkHBonds(appf,no_d, ox_a, h_don, acc_ante, ssindex):
         return
             
     #4 Angle(don, acc, acc_ante) > 90
-    daa_ang =  pr.calcAngle( no_d, ox_a, acc_ante)
-    if( daa_ang < DAB_ANGLE ):
-        return
+    #daa_ang =  pr.calcAngle( no_d, ox_a, acc_ante)
+    #if( daa_ang < DAB_ANGLE ):
+    #    return
             
     #5 Angle(h_don, acc, acc_ante) > 90
     haa_ang = pr.calcAngle( h_don, ox_a, acc_ante )
@@ -173,6 +179,8 @@ def checkHBonds(appf,no_d, ox_a, h_don, acc_ante, ssindex):
         
     #PUT DATA INTO COLUMN DATA STRUCTURES
 #    print ssindex
+    #towrite = ",".join([str(h_don.getResnum()),str(h_don.getCoords())])
+    #fp.write(towrite+"\r\n")
     COLUMN_D_ON  [ssindex].append(da_dist)
     COLUMN_D_OH  [ssindex].append(ha_dist)
     COLUMN_A_NHO [ssindex].append(dha_ang)
@@ -197,8 +205,8 @@ def parseHelices(appf):
             acc_ante = getAntecedent(appf, ox_a) #Get acc_ante
             ssindex = getSSIndex(acc_ante) # get ssindex
             h_don = getHforAtom(appf,no_d)
-            newCoords = setHcoords(no_d,ox_a,acc_ante)
-            h_don.setCoords(newCoords)
+            #newCoords = setHcoords(no_d,ox_a,acc_ante)
+            #h_don.setCoords(newCoords)
             checkHBonds(appf,no_d,ox_a,h_don,acc_ante,ssindex)
     return
 
@@ -229,7 +237,7 @@ def runThrough(pfile):
     # initial setup
     print "Running through " + pfile + "..."
     numMdls = getNumMdls(pfile)
-    print numMdls
+    #print numMdls
     appf = pr.parsePDB(pfile, model=numMdls, secondary=True, chain='A', altLoc=False)
     los = sheets.initializeList(pfile)
     parseHelices(appf)
@@ -247,4 +255,5 @@ def runThrough(pfile):
     print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
     print np.array(TABLE).T
 
-runThrough('1A6S_A_H.pdb')
+runThrough('1A2Z_A_H.pdb')
+#fp.close()
