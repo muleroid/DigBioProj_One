@@ -1,6 +1,7 @@
 import prody as pr
 import math
 import numpy as np
+import os
 import sheets
 
 DONOR_ACCEPTOR_MAXDISTANCE = 3.5
@@ -12,13 +13,12 @@ HAB_ANGLE = 90
 #COLUMNS FOR DATA
 #STRUCTURE INDICES ARE: 0=ALPHA, 1=310ALPHA, 2=PARALLEL, 3=ANTIPARALLEL
 #COLUMN[STRUCTURE][1-N]
-COLUMN_D_ON  = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_D_OH  = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_A_NHO = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_A_HOC = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_BETA  = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-COLUMN_GAMMA = [[],[],[],[]] # Convert to [[],[],[],[]] when we separate parallel and antiparallel
-#fp = open('new_H.txt','wb')
+COLUMN_D_ON  = [[],[],[],[]] 
+COLUMN_D_OH  = [[],[],[],[]] 
+COLUMN_A_NHO = [[],[],[],[]] 
+COLUMN_A_HOC = [[],[],[],[]] 
+COLUMN_BETA  = [[],[],[],[]] 
+COLUMN_GAMMA = [[],[],[],[]] 
 
 def getHforAtom(appf, anAtom):
     resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
@@ -255,5 +255,52 @@ def runThrough(pfile):
     print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
     print np.array(TABLE).T
 
-runThrough('1A2Z_A_H.pdb')
-#fp.close()
+# code to run through all the files and stuff
+AGGR_D_ON  = [0,0,0,0] 
+AGGR_D_OH  = [0,0,0,0] 
+AGGR_A_NHO = [0,0,0,0] 
+AGGR_A_HOC = [0,0,0,0] 
+AGGR_BETA  = [0,0,0,0] 
+AGGR_GAMMA = [0,0,0,0]
+
+LEN_D_ON = [0,0,0,0]
+LEN_D_OH = [0,0,0,0]
+LEN_A_NHO = [0,0,0,0]
+LEN_A_HOC = [0,0,0,0]
+LEN_BETA = [0,0,0,0]
+LEN_GAMMA = [0,0,0,0]
+
+pFiles = os.listdir(os.getcwd())
+for pfile in pFiles:
+    # reset everything
+    COLUMN_D_ON  = [[],[],[],[]] 
+    COLUMN_D_OH  = [[],[],[],[]] 
+    COLUMN_A_NHO = [[],[],[],[]] 
+    COLUMN_A_HOC = [[],[],[],[]] 
+    COLUMN_BETA  = [[],[],[],[]] 
+    COLUMN_GAMMA = [[],[],[],[]] 
+    runThrough(pfile)
+    # aggregate that shit
+    AGGR_D_ON = [(AGGR_D_ON[i] + sum(COLUMN_D_ON[i])) for i in range(4)]
+    AGGR_D_OH = [(AGGR_D_OH[i] + sum(COLUMN_D_OH[i])) for i in range(4)]
+    AGGR_A_NHO = [(AGGR_A_NHO[i] + sum(COLUMN_A_NHO[i])) for i in range(4)]
+    AGGR_A_HOC = [(AGGR_A_HOC[i] + sum(COLUMN_A_HOC[i])) for i in range(4)]
+    AGGR_BETA = [(AGGR_BETA[i] + sum(COLUMN_BETA[i])) for i in range(4)]
+    AGGR_GAMMA = [(AGGR_GAMMA[i] + sum(COLUMN_GAMMA[i])) for i in range(4)]
+
+    LEN_D_ON = [(LEN_D_ON[i] + len(COLUMN_D_ON[i])) for i in range(4)]
+    LEN_D_OH = [(LEN_D_OH[i] + len(COLUMN_D_OH[i])) for i in range(4)]
+    LEN_A_NHO = [(LEN_A_NHO[i] + len(COLUMN_A_NHO[i])) for i in range(4)]
+    LEN_A_HOC = [(LEN_A_HOC[i] + len(COLUMN_A_HOC[i])) for i in range(4)]
+    LEN_BETA = [(LEN_BETA + len(COLUMN_BETA[i])) for i in range(4)]
+    LEN_GAMMA = [(LEN_GAMMA + len(COLUMN_GAMMA[i])) for i in range(4)]
+
+# calculate the averages
+AVG_D_ON = [(AGGR_D_ON[i]/LEN_D_ON[i]) for i in range(4)]
+AVG_D_OH = [(AGGR_D_OH[i]/LEN_D_OH[i]) for i in range(4)]
+AVG_A_NHO = [(AGGR_A_NHO[i]/LEN_A_NHO[i]) for i in range(4)]
+AVG_A_HOC = [(AGGR_A_HOC[i]/LEN_A_HOC[i]) for i in range(4)]
+AVG_BETA = [(AGGR_BETA[i]/LEN_BETA[i]) for i in range(4)]
+AVG_GAMMA = [(AGGR_GAMMA[i]/LEN_GAMMA[i]) for i in range(4)]
+TABLE = [AVG_D_ON,AVG_D_OH,AVG_A_NHO,AVG_A_HOC,AVG_BETA,AVG_GAMMA]
+print np.array(TABLE).T
