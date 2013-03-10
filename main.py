@@ -18,7 +18,7 @@ COLUMN_D_OH  = [[],[],[],[]]
 COLUMN_A_NHO = [[],[],[],[]] 
 COLUMN_A_HOC = [[],[],[],[]] 
 COLUMN_BETA  = [[],[],[],[]] 
-COLUMN_GAMMA = [[],[],[],[]] 
+COLUMN_GAMMA = [[],[],[],[]]
 
 def getHforAtom(appf, anAtom):
     resnumneighbors = appf.select('resnum '+str(anAtom.getResnum()))
@@ -31,7 +31,7 @@ def getHforAtom(appf, anAtom):
             #print pr.calcDistance(at,anAtom), at.getResnum(), at.getName()
                 curMin = dist
                 target = at
-    return at
+    return target
 
 def setHcoords(nAtom, oAtom, cAtom):
     # get coordinates
@@ -140,12 +140,13 @@ def getNumMdls(pfile):
 #pfile = '/Users/fsimon/Google Drive/School/Winter_13/Digital Biology/Project/DigBioProj_One/test.pdb'
 #pfile = '1A6S_A_H.pdb'
 
-def checkHBonds(appf,no_d, ox_a, h_don, acc_ante, ssindex):
+def checkHBonds(appf,no_d, ox_a, ssindex):
     #1 Dist(don, acc) < 3.5
     da_dist = pr.calcDistance( no_d , ox_a )
     if( da_dist >= DONOR_ACCEPTOR_MAXDISTANCE ):
         return
 
+    h_don = getHforAtom(appf,no_d)
     #2 Dist(h_don, acc) < 3.5
     ha_dist  = pr.calcDistance(h_don, ox_a)
     if( ha_dist >=  HYDROGEN_ACCEPTOR_MAXDISTANCE):
@@ -160,7 +161,8 @@ def checkHBonds(appf,no_d, ox_a, h_don, acc_ante, ssindex):
     #daa_ang =  pr.calcAngle( no_d, ox_a, acc_ante)
     #if( daa_ang < DAB_ANGLE ):
     #    return
-            
+
+    acc_ante = getAntecedent(appf, ox_a) #Get acc_ante
     #5 Angle(h_don, acc, acc_ante) > 90
     haa_ang = pr.calcAngle( h_don, ox_a, acc_ante )
     if( haa_ang < HAB_ANGLE ):
@@ -202,12 +204,8 @@ def parseHelices(appf):
             o_secStruct = getSSIndex(ox_a)
             if(o_secStruct != n_secStruct):
                 continue
-            acc_ante = getAntecedent(appf, ox_a) #Get acc_ante
-            ssindex = getSSIndex(acc_ante) # get ssindex
-            h_don = getHforAtom(appf,no_d)
-            #newCoords = setHcoords(no_d,ox_a,acc_ante)
-            #h_don.setCoords(newCoords)
-            checkHBonds(appf,no_d,ox_a,h_don,acc_ante,ssindex)
+            ssindex = getSSIndex(ox_a) # get ssindex
+            checkHBonds(appf,no_d,ox_a,ssindex)
     return
 
 # do the sheets
@@ -221,16 +219,21 @@ def parseSheets(appf, los):
             continue
         for no_d in base.getNAtoms():
             for ox_a in comp.getOAtoms():
-                acc_ante = getAntecedent(appf, ox_a)
                 if(comp.getSense() > 0):
                     ssindex = 2
                 else:
                     ssindex = 3
-                h_don = getHforAtom(appf,no_d)
-                newCoords = setHcoords(no_d,ox_a,acc_ante)
-                h_don.setCoords(newCoords)
-                checkHBonds(appf,no_d,ox_a,h_don,acc_ante,ssindex)
+                checkHBonds(appf,no_d,ox_a,ssindex)
     return
+
+# some mathy functions
+def sumMeans(n1,n2,u1,u2):
+    return (n1*u1+n2*u2) / (n1+n2)
+
+def sumStds(n1,n2,u1,u2,s1,s2):
+    x1 = (n1*s1*s1+n2*s2*s2) / (n1+n2)
+    x2 = (n1*n2*((u1-u2)**2))/((n1+n2)**2)
+    return math.sqrt(x1+x2)
 
 # main function
 def runThrough(pfile):
@@ -241,20 +244,33 @@ def runThrough(pfile):
     appf = pr.parsePDB(pfile, model=numMdls, secondary=True, chain='A', altLoc=False)
     los = sheets.initializeList(pfile)
     parseHelices(appf)
-    parseSheets(appf,los)
+    if(los != None):
+        parseSheets(appf,los)
 
-    # print out our results
-    COLUMN_D_ON_AV  = [sum(x)/len(x) for x in COLUMN_D_ON if len(x) > 0]
-    COLUMN_D_OH_AV  = [sum(x)/len(x) for x in COLUMN_D_OH if len(x) > 0]
-    COLUMN_A_NHO_AV = [sum(x)/len(x) for x in COLUMN_A_NHO if len(x) > 0]
-    COLUMN_A_HOC_AV = [sum(x)/len(x) for x in COLUMN_A_HOC if len(x) > 0]
-    COLUMN_BETA_AV  = [sum(x)/len(x) for x in COLUMN_BETA if len(x) > 0]
-    COLUMN_GAMMA_AV = [sum(x)/len(x) for x in COLUMN_GAMMA if len(x) > 0]
+    # get them means
+    COLUMN_D_ON_AV  = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_D_ON]
+    COLUMN_D_OH_AV  = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_D_OH]
+    COLUMN_A_NHO_AV = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_A_NHO]
+    COLUMN_A_HOC_AV = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_A_HOC]
+    COLUMN_BETA_AV  = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_BETA]
+    COLUMN_GAMMA_AV = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_GAMMA]
+
+    # get the std devs, nasty shit
+    COLUMN_D_ON_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_D_ON]
+    COLUMN_D_OH_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_D_OH]
+    COLUMN_A_NHO_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_A_NHO]
+    COLUMN_A_HOC_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_A_HOC]
+    COLUMN_BETA_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_BETA]
+    COLUMN_GAMMA_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_GAMMA]
 
     TABLE = [COLUMN_D_ON_AV, COLUMN_D_OH_AV, COLUMN_A_NHO_AV, COLUMN_A_HOC_AV, COLUMN_BETA_AV, COLUMN_GAMMA_AV]
+    STDS = [COLUMN_D_ON_STD, COLUMN_D_OH_STD, COLUMN_A_NHO_STD, COLUMN_A_HOC_STD, COLUMN_BETA_STD, COLUMN_GAMMA_STD]
     print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
     print np.array(TABLE).T
+    print np.array(STDS).T
+    return (TABLE,STDS)
 
+##runThrough("1A2Z_A_H.pdb")
 # code to run through all the files and stuff
 AGGR_D_ON  = [0,0,0,0] 
 AGGR_D_OH  = [0,0,0,0] 
@@ -262,6 +278,13 @@ AGGR_A_NHO = [0,0,0,0]
 AGGR_A_HOC = [0,0,0,0] 
 AGGR_BETA  = [0,0,0,0] 
 AGGR_GAMMA = [0,0,0,0]
+
+STD_D_ON = [0,0,0,0]
+STD_D_OH = [0,0,0,0]
+STD_A_NHO = [0,0,0,0]
+STD_A_HOC = [0,0,0,0]
+STD_BETA = [0,0,0,0]
+STD_GAMMA = [0,0,0,0]
 
 LEN_D_ON = [0,0,0,0]
 LEN_D_OH = [0,0,0,0]
@@ -271,6 +294,9 @@ LEN_BETA = [0,0,0,0]
 LEN_GAMMA = [0,0,0,0]
 
 pFiles = os.listdir(os.getcwd())
+# filter for only reduced pdb files
+pFiles = [x for x in pFiles if x[-6:] == "_H.pdb"]
+#print pFiles
 for pfile in pFiles:
     # reset everything
     COLUMN_D_ON  = [[],[],[],[]] 
@@ -279,28 +305,46 @@ for pfile in pFiles:
     COLUMN_A_HOC = [[],[],[],[]] 
     COLUMN_BETA  = [[],[],[],[]] 
     COLUMN_GAMMA = [[],[],[],[]] 
-    runThrough(pfile)
+    (results, stds) = runThrough(pfile)
     # aggregate that shit
-    AGGR_D_ON = [(AGGR_D_ON[i] + sum(COLUMN_D_ON[i])) for i in range(4)]
-    AGGR_D_OH = [(AGGR_D_OH[i] + sum(COLUMN_D_OH[i])) for i in range(4)]
-    AGGR_A_NHO = [(AGGR_A_NHO[i] + sum(COLUMN_A_NHO[i])) for i in range(4)]
-    AGGR_A_HOC = [(AGGR_A_HOC[i] + sum(COLUMN_A_HOC[i])) for i in range(4)]
-    AGGR_BETA = [(AGGR_BETA[i] + sum(COLUMN_BETA[i])) for i in range(4)]
-    AGGR_GAMMA = [(AGGR_GAMMA[i] + sum(COLUMN_GAMMA[i])) for i in range(4)]
+    AGGR_D_ON = [sumMeans(LEN_D_ON[i],len(COLUMN_D_ON[i]),AGGR_D_ON[i],
+                          results[0][i]) for i in range(4)]
+    AGGR_D_OH = [sumMeans(LEN_D_OH[i],len(COLUMN_D_OH[i]),AGGR_D_OH[i],
+                          results[1][i])  for i in range(4)]
+    AGGR_A_NHO = [sumMeans(LEN_A_NHO[i],len(COLUMN_A_NHO[i]),AGGR_A_NHO[i],
+                          results[2][i])  for i in range(4)]
+    AGGR_A_HOC = [sumMeans(LEN_A_HOC[i],len(COLUMN_A_HOC[i]),AGGR_A_HOC[i],
+                          results[3][i])  for i in range(4)]
+    AGGR_BETA = [sumMeans(LEN_BETA[i],len(COLUMN_BETA[i]),AGGR_BETA[i],
+                          results[4][i])  for i in range(4)]
+    AGGR_GAMMA = [sumMeans(LEN_GAMMA[i],len(COLUMN_GAMMA[i]),AGGR_GAMMA[i],
+                          results[5][i])  for i in range(4)]
+
+    STD_D_ON = [sumStds(LEN_D_ON[i],len(COLUMN_D_ON[i]),AGGR_D_ON[i],
+                    results[0][i],STD_D_ON[i],stds[0][i]) for i in range(4)]
+    STD_D_OH = [sumStds(LEN_D_OH[i],len(COLUMN_D_OH[i]),AGGR_D_OH[i],
+                    results[1][i],STD_D_OH[i],stds[1][i]) for i in range(4)]
+    STD_A_NHO = [sumStds(LEN_A_NHO[i],len(COLUMN_A_NHO[i]),AGGR_A_NHO[i],
+                    results[2][i],STD_A_NHO[i],stds[2][i]) for i in range(4)]
+    STD_A_HOC = [sumStds(LEN_A_HOC[i],len(COLUMN_A_HOC[i]),AGGR_A_HOC[i],
+                    results[3][i],STD_A_HOC[i],stds[3][i]) for i in range(4)]
+    STD_BETA = [sumStds(LEN_BETA[i],len(COLUMN_BETA[i]),AGGR_BETA[i],
+                    results[4][i],STD_BETA[i],stds[4][i]) for i in range(4)]
+    STD_GAMMA = [sumStds(LEN_GAMMA[i],len(COLUMN_GAMMA[i]),AGGR_GAMMA[i],
+                    results[5][i],STD_GAMMA[i],stds[5][i]) for i in range(4)]
 
     LEN_D_ON = [(LEN_D_ON[i] + len(COLUMN_D_ON[i])) for i in range(4)]
     LEN_D_OH = [(LEN_D_OH[i] + len(COLUMN_D_OH[i])) for i in range(4)]
     LEN_A_NHO = [(LEN_A_NHO[i] + len(COLUMN_A_NHO[i])) for i in range(4)]
     LEN_A_HOC = [(LEN_A_HOC[i] + len(COLUMN_A_HOC[i])) for i in range(4)]
-    LEN_BETA = [(LEN_BETA + len(COLUMN_BETA[i])) for i in range(4)]
-    LEN_GAMMA = [(LEN_GAMMA + len(COLUMN_GAMMA[i])) for i in range(4)]
+    LEN_BETA = [(LEN_BETA[i] + len(COLUMN_BETA[i])) for i in range(4)]
+    LEN_GAMMA = [(LEN_GAMMA[i] + len(COLUMN_GAMMA[i])) for i in range(4)]
 
-# calculate the averages
-AVG_D_ON = [(AGGR_D_ON[i]/LEN_D_ON[i]) for i in range(4)]
-AVG_D_OH = [(AGGR_D_OH[i]/LEN_D_OH[i]) for i in range(4)]
-AVG_A_NHO = [(AGGR_A_NHO[i]/LEN_A_NHO[i]) for i in range(4)]
-AVG_A_HOC = [(AGGR_A_HOC[i]/LEN_A_HOC[i]) for i in range(4)]
-AVG_BETA = [(AGGR_BETA[i]/LEN_BETA[i]) for i in range(4)]
-AVG_GAMMA = [(AGGR_GAMMA[i]/LEN_GAMMA[i]) for i in range(4)]
-TABLE = [AVG_D_ON,AVG_D_OH,AVG_A_NHO,AVG_A_HOC,AVG_BETA,AVG_GAMMA]
+print ' MEANS '
+print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
+TABLE = [AGGR_D_ON,AGGR_D_OH,AGGR_A_NHO,AGGR_A_HOC,AGGR_BETA,AGGR_GAMMA]
 print np.array(TABLE).T
+print ' STANDARD DEVIATIONS '
+print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
+STDS = [STD_D_ON,STD_D_OH,STD_A_NHO,STD_A_HOC,STD_BETA,STD_GAMMA]
+print np.array(STDS).T
