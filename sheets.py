@@ -60,6 +60,8 @@ def buildStrands(appf, list_of_strands):
         end = s[2]
         for resNum in np.arange(start,end+1):
             curGroup = appf.select('resnum ' + str(resNum))
+            if(curGroup == None):
+                continue
             for atom in curGroup:
                 if(atom.getName() == 'N'):
                     curDons.append(atom)
@@ -83,59 +85,3 @@ def test(pfile):
             print n.getResname()
             print n.getSecstr()
     return
-
-#test('1A2Z_A.pdb')
-
-##def getUniqueIDofStrand (residueNumber, listOfStrands):
-##    for strand in listOfStrands:
-##        if( (residueNumber >= strand[1]) & (residueNumber <= strand[2]) ):
-##            return strand[3]
-##
-##def returnParOrAnti(residueNumber, listOfStrands):
-##    thisUID = getUniqueIDofStrand(residueNumber, listOfStrands)
-##    parallel = None
-##
-##    for i in range(0, len(listOfStrands)):
-##        #Search list to find correct strand.
-##        strand = listOfStrands[i]
-##        if( (residueNumber >= strand[1]) & (residueNumber <= strand[2]) ):
-##            #Found the strand we want.
-##
-##            if(strand[0] == 0):
-##                return "BASE"
-##
-##            for strand in listOfStrands:
-##                #Toggle parallelbool from origin to sink to figure out anti vs parallel
-##                if(thisUID == strand[3]):
-##                    if(residueNumber > strand[2]): #went too far
-##                        break
-##                    #Only toggle in the same sheet.
-##                    if(strand[0] == -1):
-##                        print strand[1], strand[2]
-##                        if(parallel == None):
-##                            parallel = False
-##                            continue
-##                        parallel = not parallel
-##                    if(strand[0] == 1):
-##                        if(parallel == None):
-##                            parallel = True
-##                            continue
-##                        parallel = parallel
-##
-##            if(parallel == True):
-##                return "PARALLEL"
-##            else:
-##                return "ANTIPARALLEL"
-##
-##
-##                      
-##                #look back until we found a 0 sense strand.
-##
-##thelist = initializeList()
-##print returnParOrAnti(71, thelist)
-##
-##
-##                #initial_resname   = line[17:20]
-##                        #code_for_insert   = line[27]
-##        #termin_resid_name = line[28:31]
-##                #code_for_insert2  = line[37]
