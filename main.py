@@ -198,7 +198,13 @@ def checkHBonds(appf,no_d, ox_a, ssindex):
             
     beta_ang = getBetaAngle (appf,acc_ante,ox_a,h_don)
     gamm_ang = getGammaAngle(appf,acc_ante,ox_a,h_don)
-        
+
+    resNum = h_don.getResnum()
+    chain = appf.iterChains().next()
+    phi = pr.calcPhi(chain.getResidue(resNum))
+    psi = pr.calcPsi(chain.getResidue(resNum))
+    #print phi, psi
+
     #PUT DATA INTO COLUMN DATA STRUCTURES
 #    print ssindex
     #towrite = ",".join([str(h_don.getResnum()),str(h_don.getCoords())])
@@ -210,6 +216,8 @@ def checkHBonds(appf,no_d, ox_a, ssindex):
     COLUMN_A_HOC [ssindex].append(haa_ang)
     COLUMN_BETA  [ssindex].append(beta_ang)
     COLUMN_GAMMA [ssindex].append(gamm_ang)
+    COLUMN_PHI   [ssindex].append(phi)
+    COLUMN_PSI   [ssindex].append(psi)
     return
 
 def parseHelices(appf):
@@ -279,6 +287,9 @@ def runThrough(pfile):
     COLUMN_A_HOC_AV = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_A_HOC]
     COLUMN_BETA_AV  = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_BETA]
     COLUMN_GAMMA_AV = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_GAMMA]
+    COLUMN_PHI_AV   = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_PHI]
+    COLUMN_PSI_AV   = [sum(x)/len(x) if len(x) > 0 else 0 for x in COLUMN_PSI]
+
 
     # get the std devs, nasty shit
     COLUMN_D_ON_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_D_ON]
@@ -287,9 +298,11 @@ def runThrough(pfile):
     COLUMN_A_HOC_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_A_HOC]
     COLUMN_BETA_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_BETA]
     COLUMN_GAMMA_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_GAMMA]
+    COLUMN_PHI_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_PHI]
+    COLUMN_PSI_STD = [np.std(x) if len(x) > 0 else 0 for x in COLUMN_PSI]
 
-    TABLE = [COLUMN_D_ON_AV, COLUMN_D_OH_AV, COLUMN_A_NHO_AV, COLUMN_A_HOC_AV, COLUMN_BETA_AV, COLUMN_GAMMA_AV]
-    STDS = [COLUMN_D_ON_STD, COLUMN_D_OH_STD, COLUMN_A_NHO_STD, COLUMN_A_HOC_STD, COLUMN_BETA_STD, COLUMN_GAMMA_STD]
+    TABLE = [COLUMN_D_ON_AV, COLUMN_D_OH_AV, COLUMN_A_NHO_AV, COLUMN_A_HOC_AV, COLUMN_BETA_AV, COLUMN_GAMMA_AV, COLUMN_PHI_AV, COLUMN_PSI_AV]
+    STDS = [COLUMN_D_ON_STD, COLUMN_D_OH_STD, COLUMN_A_NHO_STD, COLUMN_A_HOC_STD, COLUMN_BETA_STD, COLUMN_GAMMA_STD, COLUMN_PHI_STD, COLUMN_PSI_STD]
     #print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
     #print np.array(TABLE).T
     #print np.array(STDS).T
@@ -303,6 +316,8 @@ AGGR_A_NHO = [0,0,0,0]
 AGGR_A_HOC = [0,0,0,0] 
 AGGR_BETA  = [0,0,0,0] 
 AGGR_GAMMA = [0,0,0,0]
+AGGR_PHI = [0,0,0,0]
+AGGR_PSI = [0,0,0,0]
 
 STD_D_ON = [0,0,0,0]
 STD_D_OH = [0,0,0,0]
@@ -310,6 +325,8 @@ STD_A_NHO = [0,0,0,0]
 STD_A_HOC = [0,0,0,0]
 STD_BETA = [0,0,0,0]
 STD_GAMMA = [0,0,0,0]
+STD_PHI = [0,0,0,0]
+STD_PSI = [0,0,0,0]
 
 LEN_D_ON = [0,0,0,0]
 LEN_D_OH = [0,0,0,0]
@@ -317,6 +334,8 @@ LEN_A_NHO = [0,0,0,0]
 LEN_A_HOC = [0,0,0,0]
 LEN_BETA = [0,0,0,0]
 LEN_GAMMA = [0,0,0,0]
+LEN_PHI = [0,0,0,0]
+LEN_PSI = [0,0,0,0]
 
 pFiles = os.listdir(os.getcwd())
 # filter for only reduced pdb files
@@ -330,6 +349,8 @@ for pfile in pFiles:
     COLUMN_A_HOC = [[],[],[],[]] 
     COLUMN_BETA  = [[],[],[],[]] 
     COLUMN_GAMMA = [[],[],[],[]]
+    COLUMN_PHI   = [[],[],[],[]]
+    COLUMN_PSI   = [[],[],[],[]]
     try:
         (results, stds) = runThrough(pfile)
     except (AttributeError,ValueError):
@@ -347,6 +368,11 @@ for pfile in pFiles:
                           results[4][i])  for i in range(4)]
     AGGR_GAMMA = [sumMeans(LEN_GAMMA[i],len(COLUMN_GAMMA[i]),AGGR_GAMMA[i],
                           results[5][i])  for i in range(4)]
+    AGGR_PHI = [sumMeans(LEN_PHI[i],len(COLUMN_PHI[i]),AGGR_PHI[i],
+                          results[6][i])  for i in range(4)]
+    AGGR_PSI = [sumMeans(LEN_PSI[i],len(COLUMN_PSI[i]),AGGR_PSI[i],
+                          results[7][i])  for i in range(4)]
+
 
     STD_D_ON = [sumStds(LEN_D_ON[i],len(COLUMN_D_ON[i]),AGGR_D_ON[i],
                     results[0][i],STD_D_ON[i],stds[0][i]) for i in range(4)]
@@ -360,6 +386,11 @@ for pfile in pFiles:
                     results[4][i],STD_BETA[i],stds[4][i]) for i in range(4)]
     STD_GAMMA = [sumStds(LEN_GAMMA[i],len(COLUMN_GAMMA[i]),AGGR_GAMMA[i],
                     results[5][i],STD_GAMMA[i],stds[5][i]) for i in range(4)]
+    STD_PHI = [sumStds(LEN_PHI[i],len(COLUMN_PHI[i]),AGGR_PHI[i],
+                    results[6][i],STD_PHI[i],stds[6][i]) for i in range(4)]
+    STD_PSI = [sumStds(LEN_PSI[i],len(COLUMN_PSI[i]),AGGR_PSI[i],
+                    results[7][i],STD_PSI[i],stds[7][i]) for i in range(4)]
+
 
     LEN_D_ON = [(LEN_D_ON[i] + len(COLUMN_D_ON[i])) for i in range(4)]
     LEN_D_OH = [(LEN_D_OH[i] + len(COLUMN_D_OH[i])) for i in range(4)]
@@ -367,14 +398,18 @@ for pfile in pFiles:
     LEN_A_HOC = [(LEN_A_HOC[i] + len(COLUMN_A_HOC[i])) for i in range(4)]
     LEN_BETA = [(LEN_BETA[i] + len(COLUMN_BETA[i])) for i in range(4)]
     LEN_GAMMA = [(LEN_GAMMA[i] + len(COLUMN_GAMMA[i])) for i in range(4)]
+    LEN_PHI = [(LEN_PHI[i] + len(COLUMN_PHI[i])) for i in range(4)]
+    LEN_PSI = [(LEN_PSI[i] + len(COLUMN_PSI[i])) for i in range(4)]
 
 print ' MEANS '
-print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
-TABLE = [AGGR_D_ON,AGGR_D_OH,AGGR_A_NHO,AGGR_A_HOC,AGGR_BETA,AGGR_GAMMA]
+print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA       PHI       PSI     '
+TABLE = [AGGR_D_ON,AGGR_D_OH,AGGR_A_NHO,AGGR_A_HOC,AGGR_BETA,AGGR_GAMMA,
+         AGGR_PHI, AGGR_PSI]
 print np.array(TABLE).T
 print ' STANDARD DEVIATIONS '
-print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA   '
-STDS = [STD_D_ON,STD_D_OH,STD_A_NHO,STD_A_HOC,STD_BETA,STD_GAMMA]
+print '        D_ON          D_OH      ANGLE(NHO)    ANGLE(HOC)        BETA         GAMMA       PHI       PSI     '
+STDS = [STD_D_ON,STD_D_OH,STD_A_NHO,STD_A_HOC,STD_BETA,STD_GAMMA,STD_PHI,
+        STD_PSI]
 print np.array(STDS).T
 
 print 'NUMBER OF H-BONDS'
