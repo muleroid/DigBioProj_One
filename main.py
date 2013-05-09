@@ -200,6 +200,8 @@ def checkHBonds(appf,no_d, ox_a, ssindex):
     gamm_ang = getGammaAngle(appf,acc_ante,ox_a,h_don)
 
     resNum = h_don.getResnum()
+    if(resNum <= 0):
+        return
     chain = appf.iterChains().next()
     phi = pr.calcPhi(chain.getResidue(resNum))
     psi = pr.calcPsi(chain.getResidue(resNum))

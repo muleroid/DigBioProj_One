@@ -59,6 +59,8 @@ def buildStrands(appf, list_of_strands):
         start = s[1]
         end = s[2]
         for resNum in np.arange(start,end+1):
+            if(resNum <= 0):
+                continue
             curGroup = appf.select('resnum ' + str(resNum))
             if(curGroup == None):
                 continue
